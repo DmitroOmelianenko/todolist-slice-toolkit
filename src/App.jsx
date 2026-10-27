@@ -1,49 +1,56 @@
 
-import { useState } from "react";
-import { nanoid } from "nanoid";
-import "./App.css";
 
-import { addTodo, deleteTodo, editTodo } from "./redux/todosSlice";
+import { useState, useEffect } from "react";
 import { useSelector, useDispatch } from "react-redux";
+import "./App.css";
+import { fetchTodos } from "./services/getTodo.js";
+import { addTodo } from "./services/addTodo.js";
+import { deleteTodo } from "./services/deleteTodo.js";
+import { editTodo } from "./services/editTodo.js";
 
 function App() {
   const [search, setSearch] = useState("");
-
-  const todos = useSelector(state => state.todos);
   const dispatch = useDispatch();
 
-  const handleAdd = (e) => {
+  const todos = useSelector((state) =>
+    Array.isArray(state.todos) ? state.todos : []
+  );
+
+  useEffect(() => {
+    dispatch(fetchTodos());
+  }, [dispatch]);
+
+  const handleAdd = async (e) => {
     e.preventDefault();
 
-    const text = e.target.elements.newTodo.value;
+    const form = e.currentTarget;
+    const text = form.elements.newTodo.value.trim();
 
-    if (!text.trim()) return;
+    if (!text) return;
 
-    dispatch(addTodo({
-      id: nanoid(),
-      text: text.trim()
-    }));
+    const result = await dispatch(addTodo(text));
 
-    e.target.reset();
+    if (addTodo.fulfilled.match(result)) {
+      form.reset();
+    }
+    console.log(result, "test")
+    console.log(text, "test")
   };
 
-  const handleDelete = (todoId) => {
-    dispatch(deleteTodo(todoId));
+  const handleDelete = (id) => {
+    dispatch(deleteTodo(id));
   };
 
   const handleEdit = (todo, e) => {
     const input = e.currentTarget.parentElement.querySelector(".editInput");
-    const newText = input.value;
+    const text = input.value.trim();
 
-    if (!newText.trim()) return;
+    if (!text || text === todo.text) return;
 
-    dispatch(editTodo({
-      id: todo.id,
-      text: newText.trim()
-    }));
+    dispatch(editTodo({ id: todo.id, text }));
   };
 
-  const filteredTodos = todos.filter(todo =>
+  const filteredTodos = todos.filter((todo) =>
     todo.text.toLowerCase().includes(search.toLowerCase())
   );
 
@@ -52,7 +59,6 @@ function App() {
       <h2>ToDo List</h2>
 
       <input
-        type="text"
         placeholder="Пошук..."
         value={search}
         onChange={(e) => setSearch(e.target.value)}
@@ -60,36 +66,26 @@ function App() {
 
       <form onSubmit={handleAdd}>
         <input
-          type="text"
           name="newTodo"
           placeholder="Введіть задачу..."
         />
-
         <button type="submit">Додати</button>
       </form>
 
       <ul>
-        {filteredTodos.map(todo => (
-          <li key={todo.id} id={todo.id}>
+        {filteredTodos.map((todo) => (
+          <li key={todo.id}>
             <span>{todo.text}</span>
 
-            <button
-              type="button"
-              onClick={() => handleDelete(todo.id)}
-            >
+            <button onClick={() => handleDelete(todo.id)}>
               Видалити
             </button>
 
-            <button
-              className="editButton"
-              type="button"
-              onClick={(e) => handleEdit(todo, e)}
-            >
+            <button onClick={(e) => handleEdit(todo, e)}>
               Редагувати
             </button>
 
             <input
-              type="text"
               className="editInput"
               defaultValue={todo.text}
             />
